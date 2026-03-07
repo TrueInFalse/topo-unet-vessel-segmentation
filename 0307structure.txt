@@ -1,0 +1,162 @@
+2026.3.7 17:20
+/root/autodl-tmp/1KIMI
+├── DRIVE
+│   ├── test
+│   │   ├── images  
+│   │   └── mask     
+│   └── training
+│       ├── 1st_manual
+│       ├── images
+│       └── mask
+│           
+├── MD文档
+│   ├── CODE_REVIEW_REPORT.md
+│   ├── DIFF_INVESTIGATION_REPORT.md
+│   ├── FIX_LOG.md
+│   ├── FRAGMENT_SUPPRESS_125E_REPORT.md
+│   ├── ROI_ALIGNED_20E_REPORT.md
+│   ├── ROI_DICE_AUDIT.md
+│   ├── TOPO_SHAPE_ABLATION_20E_REPORT.md
+│   ├── data_drive.md
+│   ├── diff_analysis_report.md
+│   ├── evaluate.md
+│   ├── fix_report.md
+│   ├── model_unet.md
+│   ├── topology_loss.md
+│   ├── train_baseline.md
+│   ├── train_with_topology.md
+│   ├── utils_metrics.md
+│   ├── visualize_results.md
+│   └── 仓库深度理解报告_2026-03-06.md
+├── README.md
+├── TEMP
+│   ├── 0302基线二十轮.csv
+│   └── 0302拓扑二十轮0参数.csv
+├── TEST_AI_USE
+│   ├── debug_sample.png
+│   ├── roi_audit_final.py
+│   ├── roi_audit_kaggle.py
+│   ├── run_topo_roi_debug.sh
+│   ├── test_0211_01_u.py
+│   ├── test_end_to_end.py
+│   ├── test_topo_fix.py
+│   ├── threshold_sweep.py
+│   ├── verify_data.py
+│   ├── verify_roi_usage.py
+│   ├── verify_user.ipynb
+│   └── verify_user.py
+├── artifacts
+│   └── roi_audit
+│       ├── ROI_AUDIT_REPORT.md
+│       ├── TOPO_ROI_EVIDENCE.md
+│       ├── overlays
+│       │   ├── train
+│       │   │   
+│       │   └── val
+│       ├── roi_mode_compare.json
+│       ├── topo_roi_debug_ones.txt
+│       └── topo_roi_debug_tiny.txt
+├── audit_results
+│   └── roi_dice
+│       ├── audit_results.txt
+│       ├── batch0_sample0_diff0.0512.png
+│       ├── batch0_sample0_diff0.0671.png
+│       ├── batch10_sample0_diff0.0510.png
+│       └── batch10_sample1_diff0.0871.png
+├── audit_roi_dice_gap.py
+├── checkpoints
+│   ├── best_model.pth
+│   ├── best_model_baseline_roi.pth
+│   ├── best_model_topo.pth
+│   ├── best_model_topo_roi.pth
+│   ├── checkpoint_epoch_10.pth
+│   ├
+│   └── stage1_baseline_frozen.pth
+├── config.yaml
+├── config_125e.yaml
+├── config_20e.yaml
+├── data
+│   ├── archive.zip
+│   └── combined
+│       ├── Test
+│       │   ├── images
+│       │   └── masks
+│       ├── Test Unlabeled
+│       │   └── Images
+│       │       
+│       └── Training
+│           ├── images
+│           │   ├── .ipynb_checkpoints
+│           │   │   ├── 03_dr_HRF-checkpoint.JPG
+│           │   │   └── Image_09L_CHASE-checkpoint.jpg
+│           └── masks
+├── data_combined.py
+├── data_drive.py
+├── evaluate.py
+├── experiments
+│   ├── FRAGMENT_SUPPRESS_125E_REPORT.md
+│   ├── roi_aligned_20e
+│   │   ├── ROI_ALIGNED_20E_REPORT.md
+│   │   ├── train_baseline_roi.py
+│   │   ├── train_topo_roi.py
+│   │   ├── training_baseline_roi_log.csv
+│   │   └── training_topo_roi_20e_complete.csv
+│   └── topo_shape_ablation
+│       ├── TOPO_SHAPE_ABLATION_20E_REPORT.md
+│       ├── exp0_standard.log
+│       ├── exp1_main_component.log
+│       ├── exp2_fragment_suppress.log
+│       ├── results_summary.json
+│       └── topology_loss_ablation.py
+├── logs
+│   ├── comparison_report.txt
+│   ├── fragment_suppress_125e.csv
+│   ├── fragment_suppress_125e.log
+│   ├── pd_debug_20260305.txt
+│   ├── training_baseline_roi_log.csv
+│   ├── training_log.csv
+│   ├── training_topo_log.csv
+│   ├── training_topo_roi_20e_complete.csv
+│   ├── training_topo_roi_log.csv
+│   └── tta_summary.json
+├── model_unet.py
+├── pretrained_weights
+│   └── resnet34-333f7ec4.pth
+├── results
+│   ├── .ipynb_checkpoints
+│   │   └── training_curves-checkpoint.png
+│   ├── roi_audit
+│   │   ├── audit_results.txt
+│   │   ├── batch0_sample0_diff0.0512.png
+│   │   ├── batch0_sample0_diff0.0671.png
+│   │   ├── batch10_sample0_diff0.0510.png
+│   │   ├── batch10_sample1_diff0.0871.png
+│   │   ├── train
+│   │   └── val
+│   ├── stage_comparison.png
+│   ├── test_curves.png
+│   ├── test_sample_prediction.png
+│   ├── training_curves.png
+│   ├── tta_predictions
+│   └── val_sample_comparison.png
+├── structure.txt
+├── topology_loss.py
+├── topology_loss_ablation.py
+├── train_baseline.py
+├── train_baseline_roi.py
+├── train_topo_roi.py
+├── train_with_topology.py
+├── utils_metrics.py
+├── visualize_results.py
+├── 工程审计与实验协议冻结
+│   ├── ABLATION.md
+│   ├── CURRENT_STATUS.md
+│   ├── DRIVE_ANCHOR.md
+│   ├── EXPERIMENT_PROTOCOL.md
+│   ├── PAPER_METHOD.md
+│   ├── PARAM_AUDIT.md
+│   ├── PERF.md
+│   ├── RUN.md
+│   └── THRESHOLD_STRATEGY.md
+└── 开题报告
+    └── 开题报告_基于持续同调的卷积神经网络研究.md
