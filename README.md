@@ -1,273 +1,292 @@
-# Retina PH Seg - 视网膜血管分割项目
 
-基于持续同调（Persistent Homology）的U-Net视网膜血管分割系统，解决血管断裂问题。
+# Retina PH Seg
+A retinal vessel segmentation project based on U-Net and persistent-homology-inspired topology regularization.
 
-## 项目概述
+> 本项目面向本科毕业设计，研究目标是：在视网膜血管分割任务中，引入拓扑约束，缓解传统像素级损失导致的血管断裂、碎片化与连通性不足问题。
 
-**研究目标**：通过拓扑约束（PH Loss）改善U-Net在视网膜血管分割中的连通性问题。
+---
 
-**当前阶段**：Stage 2 - 端到端拓扑正则训练（cripser可微持续同调）
+## 当前状态
 
-**数据集**：
+**Last Updated:** 2026-03-11
 
-项目支持**双模式**数据集（通过`config.yaml`中`data.use_kaggle_combined`切换）：
+- 当前主线：`Baseline-ROI` 与 `Topology-ROI` 对照实验
+- 当前最稳结论：Baseline 已较稳定；Topology 分支已跑通并进入审计/消融阶段，但**尚未形成“稳定优于 Baseline”** 的最终结论
+- 当前数据模式：支持 **纯 DRIVE** 与 **Kaggle 联合数据集**
+- 当前重点问题：
+  - README 与代码/实验现状存在不同步风险
+  - Topology 分支的收益需要在统一口径下继续验证
+  - ROI、评估口径、训练脚本分支仍需持续收束
+- 建议读者先看：
+  - `README.md`
+  - `0307structure.txt`
+  - `experiments/` 或阶段性报告文档
+  - 最新训练脚本与配置文件
 
-#### 模式A：纯DRIVE（默认）
-- **数据集**: DRIVE（Digital Retinal Images for Vessel Extraction）
-- **训练集**: 16张（ID: 21-36）
-- **验证集**: 4张（ID: 37-40）
-- **测试集**: 20张（ID: 01-20，无标签）
-- **ROI**: 使用原始FOV掩码（圆形视野）
+---
 
-#### 模式B：Kaggle联合数据集
-- **数据集**: [Retinal Vessel Segmentation Combined](https://www.kaggle.com/datasets/pradosh123/retinal-vessel-segmentation-combined)
-- **组成**: DRIVE + HRF + CHASE DB1 + STARE
-- **训练集**: `train/` 目录（多数据集混合，约60+张）
-- **验证集**: `test/` 目录（已有官方划分，约20+张）
-- **测试集**: `unlabeled_test/` 目录（仅图像，无GT）
-- **ROI**: 自动生成全1 mask（混合数据集无统一FOV）
-- **自动下载**: 首次使用自动调用`kagglehub`下载
+## 项目简介
 
-**切换方法**:
-```yaml
-# config.yaml
-data:
-  use_kaggle_combined: false   # false = 纯DRIVE
-  # use_kaggle_combined: true  # true = Kaggle联合数据集
-```
+视网膜血管形态是高血压、糖尿病等慢病早期筛查的重要生物标志。  
+传统 U-Net 在该任务上通常能够获得较好的像素级重叠指标，但仍容易出现以下问题：
 
-**依赖安装**（联合数据集模式需要）:
-```bash
-pip install kagglehub
-```
+- 细小血管断裂
+- 中心线碎片化
+- 局部连通性不一致
+- 拓扑结构不稳定
 
-## 文件结构
+为此，本项目尝试将**持续同调（Persistent Homology）相关思想**引入分割训练过程，在不改变 U-Net 主体框架的前提下，为模型增加结构先验约束。
 
-### 核心Python模块（7个）
+---
 
-| 文件 | 功能 | 说明 |
-|------|------|------|
-| `config.yaml` | 项目配置 | 数据路径、训练参数、模型参数、数据集模式切换 |
-| `data_drive.py` | 数据加载器 | DRIVE数据集加载，16+4划分，ROI约束 |
-| `data_combined.py` | 联合数据加载器 | 双模式支持：纯DRIVE / Kaggle联合数据集（DRIVE+CHASE+STARE+HRF） |
-| `model_unet.py` | U-Net模型 | smp.Unet + ResNet34编码器，支持本地权重 |
-| `utils_metrics.py` | 评估指标 | Dice/IoU/Precision/Recall + CL-Break/Δβ₀拓扑指标 |
-| `train_baseline.py` | 训练脚本 | 纯Dice Loss，早停，学习率调度 |
-| `evaluate.py` | 评估脚本 | 验证/测试集评估，可视化结果 |
-| `visualize_results.py` | 可视化 | 验证集对比图、测试集预测图、训练曲线 |
-| `topology_loss.py` | 拓扑损失 | 软Betti数损失（端到端训练使用） |
+## 研究目标
 
-### 配套文档（MD文档/目录）
+本项目的目标不是单纯“把 Dice 做高”，而是同时关注：
 
-每个核心模块都有对应的`.md`文档，说明接口定义、使用示例和依赖关系。
+1. 像素级分割质量  
+   - Dice
+   - IoU
+   - Precision / Recall
 
-### 输出目录
+2. 结构级拓扑质量  
+   - CL-Break（中心线碎片数）
+   - Δβ₀（Betti 数误差 / 连通分量差异）
 
-```
-./
-├── checkpoints/
-│   └── best_model.pth          # 最佳模型权重
-├── logs/
-│   ├── training_log.csv        # 训练日志
-│   └── training_curves.png     # 训练曲线图
-└── results/
-    ├── val_sample_comparison.png   # 验证集对比图
-    ├── test_sample_prediction.png  # 测试集预测图
-    └── predictions/            # 预测概率图（.npy）
-```
+3. 工程可复现性  
+   - 配置可切换
+   - 训练/评估流程可重跑
+   - 实验结论有日志和文档支撑
 
-## 快速开始
+---
 
-### 环境准备
+## 方法概览
 
+### 1. Baseline
+- 主体模型：`smp.Unet + ResNet34 encoder`
+- 训练目标：以像素级损失为主
+- 用途：提供稳定对照基线
 
-**依赖安装**：
+### 2. Topology branch
+- 在 U-Net 输出概率图基础上，引入拓扑正则化模块
+- 核心关注 0 维拓扑特征（连通分量）
+- 训练时采用 λ 调度策略，逐步提高拓扑约束权重
+- 当前阶段重点是：
+  - 验证拓扑损失是否真正起作用
+  - 验证其收益是否在统一 ROI / 统一数据口径下成立
+  - 排除“伪改进”与实验口径污染
+
+---
+
+## 数据集与数据模式
+
+本项目支持两种数据模式，通过配置切换。
+
+### 模式 A：纯 DRIVE
+- 数据集：DRIVE
+- 训练集：16 张（ID 21–36）
+- 验证集：4 张（ID 37–40）
+- 测试集：20 张（ID 01–20，无 GT）
+- ROI：使用原始 FOV 掩码
+
+适用场景：
+- 小规模、干净对照
+- 纯 DRIVE 基线验证
+- ROI 口径审计
+
+### 模式 B：Kaggle 联合数据集
+- 数据来源：DRIVE + HRF + CHASE DB1 + STARE
+- 训练集：`Training/`
+- 验证集：`Test/`
+- 无标签测试：`Unlabeled_test/`
+- ROI：由代码根据当前配置处理
+
+适用场景：
+- 扩大训练数据规模
+- 观察 Baseline 与 Topology 在更大数据规模下的趋势
+- 进行更贴近最终论文展示的实验
+
+---
+
+## 目前较稳的项目结论
+
+截至当前版本，可以较稳地说：
+
+- 项目已经完成可运行的 Baseline 训练、评估、可视化闭环
+- 项目已经完成 Topology 分支的接入与多轮修正
+- 早期某些拓扑路线曾被审计为“形式存在但效果失效”
+- 当前路线已进入更严格的 ROI / 数据 / 参数口径核验阶段
+- 因此，本项目现阶段最稳的定位是：
+
+> **一个已经具备稳定 Baseline，并正在严肃审计拓扑增强有效性的医学图像分割毕业设计项目。**
+
+---
+
+## 仓库结构
+
+### 核心脚本
+- `config.yaml`：主配置文件
+- `config_20e.yaml` / `config_125e.yaml`：特定实验配置
+- `data_drive.py`：DRIVE 数据加载
+- `data_combined.py`：联合数据集加载
+- `model_unet.py`：U-Net 模型定义
+- `train_baseline.py`：Baseline 训练
+- `train_with_topology.py`：Topology 训练主脚本
+- `train_baseline_roi.py`：ROI 对齐 Baseline 实验
+- `train_topo_roi.py`：ROI 对齐 Topology 实验
+- `topology_loss.py`：拓扑损失
+- `topology_loss_ablation.py`：拓扑损失/参数消融
+- `evaluate.py`：评估脚本
+- `visualize_results.py`：可视化脚本
+- `utils_metrics.py`：指标计算
+
+### 结果与辅助目录
+- `audit_results/`：审计结果
+- `experiments/`：实验记录/阶段性产物
+- `test/`：测试相关内容
+- `0307structure.txt`：结构梳理
+- `回收站/`：历史废弃内容暂存
+
+---
+
+## 环境依赖
+
+建议环境：
+- Python 3.12+
+- PyTorch 2.x
+- CUDA 可用
+- Ubuntu / AutoDL 环境优先
+
+核心依赖示例：
 ```bash
 pip install torch torchvision
 pip install segmentation-models-pytorch
-pip install scikit-image scipy
-pip install pyyaml tqdm matplotlib
+pip install scikit-image scipy matplotlib tqdm pyyaml
+````
+
+如启用 Kaggle 联合数据集下载：
+
+```bash
+pip install kagglehub
 ```
 
-**版本控制**：
+---
 
-- **SSH 密钥认证 + 直连 GitHub**（推荐）：已完成配置
+## 数据准备
 
-- Clash代理不再启用：
-    Clash 崩溃后快速恢复（30秒修复）。如果推送时卡住/超时，按此顺序执行：
+### 1. DRIVE
 
-    ```bash
-    # Step 1: 确认死亡
-    curl --socks5 127.0.0.1:7890 -I https://github.com
-    # 如果无输出或 "Connection refused"，进入 Step 2
+将 DRIVE 数据集按如下结构放在项目根目录：
 
-    # Step 2: 清理僵尸进程（如果有）
-    pkill -f clash-meta 2>/dev/null
-
-    # Step 3: 重启
-    cd ~/clash
-    nohup ./clash-meta -f ~/.config/clash/config.yaml > clash.log 2>&1 &
-
-    # Step 4: 验证（等待2秒）
-    sleep 2 && curl --socks5 127.0.0.1:7890 -I https://github.com 2>/dev/null | head -1
-
-    # Step 5: 重新推送
-    cd ~/autodl-tmp/1KIMI && git push
-    ```
-
-### 数据准备
-
-#### 纯DRIVE模式（默认）
-
-将DRIVE数据集放在项目根目录：
-```
+```text
 DRIVE/
 ├── training/
-│   ├── images/           # 训练图像 *.tif
-│   ├── 1st_manual/       # 血管标签 *.gif
-│   └── mask/             # ROI掩码 *.gif
+│   ├── images/
+│   ├── 1st_manual/
+│   └── mask/
 └── test/
-    ├── images/           # 测试图像 *.tif
-    └── mask/             # ROI掩码 *.gif
+    ├── images/
+    └── mask/
 ```
 
-#### Kaggle联合数据集模式
+### 2. Kaggle 联合数据集
 
-**数据加载优先级**（代码自动处理）：
-1. **优先检查本地**: `data/combined/Training/images/` 是否存在且非空
-2. **如不存在**: 自动调用 `kagglehub.dataset_download()` 下载
+本地目录建议为：
 
-**本地数据结构**（如已手动准备）：
-```
+```text
 data/combined/
-├── Training/           # 训练集
-│   ├── images/         # 训练图像
-│   └── masks/          # 血管标签
-├── Test/               # 验证集
-│   ├── images/         # 验证图像
-│   └── masks/          # 验证标签
-└── Unlabeled_test/     # 无标签测试集（可选）
+├── Training/
+│   ├── images/
+│   └── masks/
+├── Test/
+│   ├── images/
+│   └── masks/
+└── Unlabeled_test/
 ```
 
-**自动下载方式**（本地不存在时）：
-```bash
-# 1. 安装kagglehub
-pip install kagglehub
+---
 
-# 2. 修改配置
-# config.yaml -> data.use_kaggle_combined: true
+## 快速开始
 
-# 3. 运行训练（首次自动下载到 ~/.cache/kagglehub/）
-python train_baseline.py  # 或 train_with_topology.py
-```
-
-### 预训练权重
-
-ResNet34 ImageNet预训练权重已下载到本地：
-```
-pretrained_weights/
-└── resnet34-333f7ec4.pth   # 本地预训练权重
-```
-
-首次运行会自动加载本地权重，无需网络请求。
-
-### 训练模型
+### 1. 训练 Baseline
 
 ```bash
 python train_baseline.py
 ```
 
-训练结束后会生成：
-- `checkpoints/best_model.pth`：最佳模型
-- `logs/training_log.csv`：训练日志
-- `logs/training_curves.png`：训练曲线
-
-### 评估模型
+### 2. 训练 Topology 版本
 
 ```bash
-# 验证集评估
-python evaluate.py --split val
+python train_with_topology.py
+```
 
-# 测试集评估（无标签，仅预测）
+### 3. 评估
+
+```bash
+python evaluate.py --split val
 python evaluate.py --split test
 ```
 
-### 可视化结果
+### 4. 可视化
 
 ```bash
-# 生成验证集对比图和测试集预测图
 python visualize_results.py
 ```
 
-## 关键特性
+---
 
-### 1. 数据验证
+## 评估指标
 
-- **16+4划分**：严格从training文件夹划分16张训练+4张验证
-- **路径检查**：自动区分`1st_manual`（血管）和`mask`（ROI）
-- **数值验证**：血管标签均值-10%，ROI均值-70%
+项目持续关注两类指标：
 
-### 2. ROI约束
+### 像素级指标
 
-所有指标（Dice、IoU、CL-Break等）均在ROI区域内计算：
-```python
-pred_roi = pred[roi_mask > 0]
-target_roi = target[roi_mask > 0]
-```
+* Dice
+* IoU
+* Precision
+* Recall
 
-### 3. 拓扑指标
+### 结构级指标
 
-- **CL-Break**：中心线碎片数（越低越好，基线~70，目标<10）
-- **Δβ₀**：Betti数误差（连通分量数差异，目标~0）
+* CL-Break：中心线碎片数，越低越好
+* Δβ₀：连通分量差异，越低越好
 
-### 4. 数据增强
+> 注意：项目强调 ROI 内评估；若更换数据模式或 ROI 生成策略，结论必须在统一口径下重新比较。
 
-训练时自动应用以下数据增强（同步应用于图像和标签）：
-- 随机水平翻转（50%概率）
-- 随机垂直翻转（50%概率）
-- 随机90度旋转（30%概率，90/180/270度）
-- 随机亮度调整（30%概率，0.8-1.2倍）
-- 随机对比度调整（20%概率，0.8-1.2倍）
+---
 
-### 5. 训练监控
+## 当前已知问题与限制
 
-- 每轮显示所有指标（Loss、Dice、IoU、Prec、Rec、CL-Break、Δβ₀）
-- 显示每轮用时、总用时、预计剩余时间
-- 早停基于Val Dice（patience=20）
-- 自动生成训练曲线图（logs/training_curves.png）
+1. README 可能落后于最新代码与实验状态
+2. 不同训练脚本之间仍存在历史分支与阶段性遗留
+3. Topology 分支的最终收益仍需更严格对照验证
+4. 不同数据模式下的 ROI 生成与评估口径需要持续统一
+5. 当前仓库中仍保留部分历史文件、阶段性实验脚本与审计产物，后续会继续收束
 
-### 6. λ调度策略（可扩展）
+---
 
-`train_with_topology.py` 支持通过 `config.yaml -> topology.lambda_schedule` 选择调度策略：
+## 文档约定
 
-- `015`（默认）：前30% epochs 固定λ=0；中间30%线性0→0.1；最后40%线性0.1→0.5。
-- `3175`：前30轮固定λ=0.1；后70轮线性增至0.5；剩余轮次固定0.5。
+从现在开始，建议采用以下职责划分：
 
-后续新增策略时，只需在代码中新增策略分支并在配置中追加参数，不必覆盖旧策略。
+* `README.md`：项目总览、快速开始、当前状态摘要
+* `docs/CURRENT_STATUS.md`：当前实验现状与结论
+* `docs/DECISIONS.md`：技术路线变化与关键决策
+* `docs/ENVIRONMENT.md`：环境、代理、推送、运维说明
+* `docs/ARCHIVE/`：历史修复记录与已过期文档
 
-### 7. Kaggle模式FOV ROI（基于图像内容估计）
+---
 
-Kaggle联合数据集模式下，ROI不再使用固定居中圆或全1，而是按每张图像估计：
+## 面向答辩/复试的项目定位
 
-1. 阈值分离非黑区域
-2. 取最大连通域
-3. 提取边界并拟合椭圆参数
-4. 生成与训练输入同尺寸的ROI mask
+这个项目最值得强调的不是“单次涨点”，而是：
 
-配置位于 `config.yaml -> data.kaggle_roi`：
-- `mode: fov`：启用内容估计FOV（默认）
-- `mode: ones`：全1 ROI（仅用于对照实验）
+* 从混乱原型逐步收束到可复现实验系统
+* 从单纯像素分割推进到结构约束分割
+* 对拓扑模块进行过失败诊断、路线修正与重新验证
+* 既有工程工作量，也有方法理解与实验审计过程
 
-可运行 `python roi_audit_kaggle.py` 产出抽样overlay、面积统计、异常样本和同checkpoint的FOV/ones对照评估。
+---
 
-## 性能基准
+## License
 
-| 指标 | Stage 1基线 | Stage 2目标（+PH Loss） |
-|------|-------------|------------------------|
-| Val Dice | ~0.75-0.78 | ≥0.82 |
-| CL-Break | ~70 | <10 |
-| Δβ₀ | ~200 | ~0 |
-
-## 文档说明
-
-- 历史修复与变更记录已迁移到 `FIX_LOG.md`，README仅保留使用说明与架构概览。
+仅用于课程/毕业设计研究与学习交流。
