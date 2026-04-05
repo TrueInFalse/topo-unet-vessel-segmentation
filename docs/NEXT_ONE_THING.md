@@ -30,7 +30,7 @@
 ## 主线实现口径（已扶正）
 
 - 当前默认拓扑损失实现：`topology_loss_fragment_suppress.py`
-- `topology_loss_ablation.py` 为历史消融保留文件，不作为默认主线依赖
+- `legacy/topology_loss_ablation.py` 为历史消融保留文件，不作为默认主线依赖
 
 ## 为什么是这一个
 

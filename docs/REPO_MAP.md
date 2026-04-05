@@ -56,7 +56,7 @@
 | `legacy/train_with_topology.py` | 旧 Topology 训练入口归档。 |
 | `legacy/visualize_results.py` | 旧可视化脚本归档。 |
 | `legacy/项目结构260315.png` | 历史结构图归档。 |
-| `topology_loss_ablation.py` | 历史消融实现保留文件（非默认主线依赖）。 |
+| `legacy/topology_loss_ablation.py` | 历史消融实现保留文件（非默认主线依赖）。 |
 | `experiments/roi_aligned_20e/*` | ROI 20e 阶段实验快照（脚本+日志）。 |
 | `experiments/topo_shape_ablation/*` | Topo 消融阶段材料与日志。 |
 | `logs/training_topo_roi_20e_complete.csv` | 20e Topo-ROI 阶段日志。 |
@@ -111,5 +111,5 @@
 - 第一阶段：文档/报告/20e 配置已收束到 `docs/`、`reports/`、`configs/archive/`。
 - 追加阶段：旧主入口脚本收束到 `legacy/`（不改逻辑、不改 import、不删文件）。
 - 主线 topo loss 扶正：默认实现已切换为 `topology_loss_fragment_suppress.py`。
-- `topology_loss_ablation.py` 作为历史消融文件保留，不再作为默认主线依赖。
+- `legacy/topology_loss_ablation.py` 作为历史消融文件保留，不再作为默认主线依赖。
 - 详细逐条迁移见 `docs/MOVE_LOG.md`。

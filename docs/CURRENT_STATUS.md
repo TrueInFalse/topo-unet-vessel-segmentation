@@ -31,7 +31,7 @@
 
 - 当前默认拓扑损失实现：`topology_loss_fragment_suppress.py`
 - `train_topo_roi.py` 已改为直接依赖该主线实现
-- `topology_loss_ablation.py` 为历史消融保留文件，不再作为默认主线依赖
+- `legacy/topology_loss_ablation.py` 为历史消融保留文件，不再作为默认主线依赖
 
 ## 6) 入口一致性状态（已修正）
 
@@ -44,4 +44,4 @@
 
 - 最强 baseline 是 `Baseline-ROI`，best Dice 0.7841。
 - 最佳 topo 是 `Fragment-Suppress`，best Dice 0.7618，拓扑指标和 baseline 基本同级。
-- 主线拓扑损失已扶正为 `topology_loss_fragment_suppress.py`；`topology_loss_ablation.py` 仅保留复盘。
+- 主线拓扑损失已扶正为 `topology_loss_fragment_suppress.py`；`legacy/topology_loss_ablation.py` 仅保留复盘。

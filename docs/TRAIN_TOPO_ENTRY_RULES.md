@@ -5,7 +5,7 @@
 ## 1) 默认拓扑损失实现
 
 - 当前默认主线实现：`topology_loss_fragment_suppress.py`
-- 历史消融保留文件：`topology_loss_ablation.py`（不作为默认主线依赖）
+- 历史消融保留文件：`legacy/topology_loss_ablation.py`（不作为默认主线依赖）
 
 ## 2) 默认读取的配置文件
 

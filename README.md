@@ -54,7 +54,7 @@
 
 历史文件说明（仅复盘）：
 
-- `topology_loss_ablation.py` 为历史消融保留文件，不作为默认主线依赖
+- `legacy/topology_loss_ablation.py` 为历史消融保留文件，不作为默认主线依赖
 - 其他历史入口已归档到 `legacy/` 或 `configs/archive/`
 
 ---
@@ -142,7 +142,6 @@ python evaluate.py --split val
 ├── train_baseline_roi.py
 ├── train_topo_roi.py
 ├── topology_loss_fragment_suppress.py
-├── topology_loss_ablation.py   # 历史消融保留
 ├── utils_metrics.py
 ├── evaluate.py
 ├── docs/
@@ -156,6 +155,7 @@ python evaluate.py --split val
 ├── reports/
 ├── configs/archive/
 └── legacy/
+    └── topology_loss_ablation.py
 ```
 
 说明：

@@ -13,7 +13,7 @@
 - `train_baseline_roi.py`
 - `train_topo_roi.py`
 - `topology_loss.py`
-- `topology_loss_ablation.py`
+- `legacy/topology_loss_ablation.py`
 
 ## C. 主线配置
 
