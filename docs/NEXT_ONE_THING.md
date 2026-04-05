@@ -1,5 +1,6 @@
 # NEXT ONE THING
 2026.4.5
+
 ## 唯一任务
 
 在完全固定主线口径（Kaggle 联合数据、`roi_mode=fov`、ROI 内 Dice、125 epoch、同随机种子）下，
@@ -25,6 +26,11 @@
 1. 以当前最佳 `fragment_suppress` 配置为起点（best Dice 0.7618）。
 2. 只改一个参数并完成 125e 训练。
 3. 与 `Baseline-ROI best=0.7841` 做同表对比，决定保留/回滚。
+
+## 主线实现口径（已扶正）
+
+- 当前默认拓扑损失实现：`topology_loss_fragment_suppress.py`
+- `topology_loss_ablation.py` 为历史消融保留文件，不作为默认主线依赖
 
 ## 为什么是这一个
 

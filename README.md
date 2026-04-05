@@ -10,7 +10,7 @@
 
 视网膜血管分割是高血压、糖尿病等慢病筛查中的关键环节。传统像素级优化（如 Dice）通常能得到可接受的重叠指标，但在细血管区域容易出现断裂、碎片化和连通性不稳定。
 
-本项目在 U-Net 框架下引入持续同调相关拓扑正则，目标是在“可复现工程流程”下比较 Baseline 与 Topo 路线的真实收益。
+本项目在 U-Net 框架下引入持续同调相关拓扑正则，目标是在可复现工程流程下比较 Baseline 与 Topo 路线的真实收益。
 
 ---
 
@@ -32,7 +32,7 @@
 - 当前最佳 Topo：`Fragment-Suppress`（125e，`best val_dice = 0.7618`，epoch 114）
 - 当前结论：修正 PD→loss 方向后，Topo 已接近可用；但在严格 125e 对照下仍略低于 Baseline
 
-一句话：当前主线已收敛为“强 Baseline + 可用但略落后的 Topo”。
+一句话：当前主线是“强 Baseline + 可用但略落后的 Topo”。
 
 ---
 
@@ -42,10 +42,20 @@
 
 - 训练脚本：`train_baseline_roi.py`、`train_topo_roi.py`
 - 配置文件：`config.yaml`（主配置母版）、`config_125e.yaml`（125e 主线配置）
-- 主线拓扑模块：`topology_loss_ablation.py`（含 `fragment_suppress`）
+- 主线拓扑模块：`topology_loss_fragment_suppress.py`（默认）
 - 主线数据加载：`data_combined.py`
 
-历史文件已归档到 `legacy/` 或 `configs/archive/`，仅用于复盘，不作为默认入口。
+`train_topo_roi.py` 当前入口规则：
+
+- 默认读取：`config.yaml`（可用 `--config` 指定）
+- `--epochs` 默认 `None`，仅显式传入才覆盖 YAML
+- `--loss-mode` 默认 `fragment_suppress`
+- 详细规则：见 `docs/TRAIN_TOPO_ENTRY_RULES.md`
+
+历史文件说明（仅复盘）：
+
+- `topology_loss_ablation.py` 为历史消融保留文件，不作为默认主线依赖
+- 其他历史入口已归档到 `legacy/` 或 `configs/archive/`
 
 ---
 
@@ -95,10 +105,10 @@ pip install scikit-image scipy matplotlib tqdm pyyaml
 pip install cripser
 ```
 
-### 2) 检查配置
+### 2) 配置文件
 
-- 日常改参入口：`config.yaml`
-- 主线 125e 复现实验：`config_125e.yaml`
+- 日常主配置：`config.yaml`
+- 主线 125e：`config_125e.yaml`
 
 ### 3) 训练 Baseline-ROI
 
@@ -106,10 +116,10 @@ pip install cripser
 python train_baseline_roi.py
 ```
 
-### 4) 训练 Topo-ROI（Fragment-Suppress 路线）
+### 4) 训练 Topo-ROI（推荐显式指定 125e 配置）
 
 ```bash
-python train_topo_roi.py
+python train_topo_roi.py --config config_125e.yaml
 ```
 
 ### 5) 评估（可选）
@@ -131,7 +141,8 @@ python evaluate.py --split val
 ├── model_unet.py
 ├── train_baseline_roi.py
 ├── train_topo_roi.py
-├── topology_loss_ablation.py
+├── topology_loss_fragment_suppress.py
+├── topology_loss_ablation.py   # 历史消融保留
 ├── utils_metrics.py
 ├── evaluate.py
 ├── docs/
@@ -140,7 +151,8 @@ python evaluate.py --split val
 │   ├── CURRENT_STATUS.md
 │   ├── NEXT_ONE_THING.md
 │   ├── MAINLINE_FILES.md
-│   └── ENVIRONMENT_TEMPLATE.md
+│   ├── ENVIRONMENT_TEMPLATE.md
+│   └── TRAIN_TOPO_ENTRY_RULES.md
 ├── reports/
 ├── configs/archive/
 └── legacy/

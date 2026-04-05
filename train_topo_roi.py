@@ -33,7 +33,7 @@ import segmentation_models_pytorch as smp
 from data_combined import get_combined_loaders
 from model_unet import get_unet_model, count_parameters
 from utils_metrics import compute_basic_metrics, compute_topology_metrics, tensor_to_numpy
-from topology_loss_ablation import TopologicalRegularizerAblation
+from topology_loss_fragment_suppress import TopologicalRegularizerFragmentSuppress
 
 
 def compute_dice_loss_roi(pred_logits, target, roi_mask, eps=1e-7):
@@ -138,20 +138,21 @@ class TrainerWithTopologyROI:
         
         self._setup_model()
         
-        # 损失函数（消融实验版）
+        # 损失函数（主线 Fragment-Suppress 版）
         topo_cfg = config.get('topology', {})
-        # 从args获取loss_mode，默认为standard
-        loss_mode = getattr(args, 'loss_mode', 'standard') if args else 'standard'
-        self.criterion_topo = TopologicalRegularizerAblation(
+        requested_loss_mode = getattr(args, 'loss_mode', 'fragment_suppress') if args else 'fragment_suppress'
+        if requested_loss_mode != 'fragment_suppress':
+            print(f"[兼容提示] 当前主线仅支持 fragment_suppress，忽略 --loss-mode={requested_loss_mode}")
+        self.loss_mode = 'fragment_suppress'
+        self.criterion_topo = TopologicalRegularizerFragmentSuppress(
             target_beta0=topo_cfg.get('target_beta0', 5),
             max_death=topo_cfg.get('max_death', 0.5),
             loss_scale=topo_cfg.get('loss_scale', 100.0),
-            loss_mode=loss_mode,
+            fragment_penalty_factor=topo_cfg.get('fragment_penalty_factor', 1.0),
+            loss_mode=self.loss_mode,
             target_lifetime=topo_cfg.get('target_lifetime', 0.5),
-            main_boost_factor=topo_cfg.get('main_boost_factor', 1.0),
-            fragment_penalty_factor=topo_cfg.get('fragment_penalty_factor', 1.0)
+            main_boost_factor=topo_cfg.get('main_boost_factor', 1.0)
         ).to(self.device)
-        self.loss_mode = loss_mode
         
         # λ调度器
         max_epochs = config['training']['max_epochs']
@@ -185,7 +186,7 @@ class TrainerWithTopologyROI:
         self.start_time = None
         
         print(f'设备: {self.device}')
-        print(f'拓扑损失: CubicalRipserLoss (ROI对齐版)')
+        print(f'Topo Loss: Fragment-Suppress (主线, ROI对齐版)')
     
     def _setup_model(self) -> None:
         """初始化模型"""
@@ -326,7 +327,7 @@ class TrainerWithTopologyROI:
             
             self.global_step += 1
         
-        # 收集PD统计信息（用于消融实验分析）
+        # 收集PD统计信息（用于主线训练诊断）
         pd_stats = self.criterion_topo.get_last_pd_stats()
         
         stats = {
@@ -456,7 +457,7 @@ class TrainerWithTopologyROI:
             print(f'  ROI Mean: {train_roi_mean:.4f} | ROI Mode: {roi_mode}')
             print(f'  Each Time: {self.format_time(epoch_time)} | Total Time: {self.format_time(elapsed)} | ETA: {self.format_time(eta)} | LR: {current_lr:.6f}')
             
-            # 打印PD统计信息（消融实验分析用）
+            # 打印PD统计信息（主线诊断用）
             if self.current_epoch in [1, 5, 10, 20] and train_stats.get('pd_stats'):
                 pd_stats = train_stats['pd_stats']
                 print(f'\n  [PD Stats - Epoch {self.current_epoch}]')
@@ -517,26 +518,31 @@ def set_seed(seed: int = 42) -> None:
 def main():
     """主函数"""
     import argparse
-    
+
     parser = argparse.ArgumentParser(description='端到端拓扑正则训练（ROI对齐版）')
-    parser.add_argument('--epochs', type=int, default=20, help='训练轮数')
-    parser.add_argument('--loss-mode', type=str, default='standard', 
+    parser.add_argument('--config', type=str, default='config.yaml',
+                        help='配置文件路径（默认: config.yaml）')
+    parser.add_argument('--epochs', type=int, default=None,
+                        help='训练轮数（仅显式传入时覆盖yaml中的training.max_epochs）')
+    parser.add_argument('--loss-mode', type=str, default='fragment_suppress',
                         choices=['standard', 'main_component', 'fragment_suppress'],
-                        help='Topo loss模式: standard=当前实现, main_component=主分量增强, fragment_suppress=碎片抑制')
+                        help='Topo loss模式（默认: fragment_suppress）')
     args = parser.parse_args()
-    
-    with open('config.yaml', 'r') as f:
+
+    with open(args.config, 'r') as f:
         config = yaml.safe_load(f)
-    
+
     set_seed(config['training'].get('seed', 42))
-    
-    if args.epochs:
+
+    if args.epochs is not None:
         config['training']['max_epochs'] = args.epochs
-    
+
     print(f"\n{'='*60}")
-    print(f"Topo Loss 消融实验: loss_mode = {args.loss_mode}")
+    print(f"Config: {args.config}")
+    print(f"Max Epochs: {config['training']['max_epochs']} ({'CLI override' if args.epochs is not None else 'from yaml'})")
+    print(f"Topo Loss: Fragment-Suppress (主线)")
     print(f"{'='*60}\n")
-    
+
     trainer = TrainerWithTopologyROI(config, args)
     train_loader, val_loader, _ = get_combined_loaders(config)
     trainer.train(train_loader, val_loader)

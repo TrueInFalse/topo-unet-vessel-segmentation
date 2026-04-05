@@ -19,15 +19,16 @@
 | `docs/NEXT_ONE_THING.md` | 当前唯一任务与完成判据。 |
 | `docs/MAINLINE_FILES.md` | 主线文件快速导航。 |
 | `docs/ENVIRONMENT_TEMPLATE.md` | 环境快照模板（已补全当前容器信息）。 |
+| `docs/TRAIN_TOPO_ENTRY_RULES.md` | Topo 主线入口规则（config/epochs/loss_mode 优先级）。 |
 | `docs/0307structure.txt` | 项目结构参考文本。 |
 | `config.yaml` | 主配置母版（带注释）。 |
 | `config_125e.yaml` | 主线 125e 配置。 |
 | `data_combined.py` | 主线数据加载器（Kaggle 联合 + DRIVE 双模式）。 |
 | `model_unet.py` | U-Net 模型定义。 |
 | `utils_metrics.py` | 指标计算（像素+拓扑）。 |
-| `topology_loss_ablation.py` | 主线拓扑损失实现（含 `fragment_suppress`）。 |
+| `topology_loss_fragment_suppress.py` | 当前默认主线拓扑损失实现。 |
 | `train_baseline_roi.py` | 主线 Baseline-ROI 训练入口。 |
-| `train_topo_roi.py` | 主线 Topo-ROI 训练入口。 |
+| `train_topo_roi.py` | 主线 Topo-ROI 训练入口（默认 fragment_suppress）。 |
 | `evaluate.py` | 评估脚本入口。 |
 | `logs/training_baseline_roi_log.csv` | 当前基线主证据日志。 |
 | `logs/fragment_suppress_125e.csv` | 当前最佳 topo 主证据日志。 |
@@ -55,6 +56,7 @@
 | `legacy/train_with_topology.py` | 旧 Topology 训练入口归档。 |
 | `legacy/visualize_results.py` | 旧可视化脚本归档。 |
 | `legacy/项目结构260315.png` | 历史结构图归档。 |
+| `topology_loss_ablation.py` | 历史消融实现保留文件（非默认主线依赖）。 |
 | `experiments/roi_aligned_20e/*` | ROI 20e 阶段实验快照（脚本+日志）。 |
 | `experiments/topo_shape_ablation/*` | Topo 消融阶段材料与日志。 |
 | `logs/training_topo_roi_20e_complete.csv` | 20e Topo-ROI 阶段日志。 |
@@ -107,5 +109,7 @@
 ## 5) 轻量整理执行结果（截至当前）
 
 - 第一阶段：文档/报告/20e 配置已收束到 `docs/`、`reports/`、`configs/archive/`。
-- 本轮追加：旧主入口脚本收束到 `legacy/`（不改逻辑、不改 import、不删文件）。
+- 追加阶段：旧主入口脚本收束到 `legacy/`（不改逻辑、不改 import、不删文件）。
+- 主线 topo loss 扶正：默认实现已切换为 `topology_loss_fragment_suppress.py`。
+- `topology_loss_ablation.py` 作为历史消融文件保留，不再作为默认主线依赖。
 - 详细逐条迁移见 `docs/MOVE_LOG.md`。

@@ -1,4 +1,11 @@
 """
+【历史消融实现（保留）】
+
+重要说明：
+- 本文件用于历史消融实验复盘（standard / main_component / fragment_suppress 多分支）
+- 当前默认主线训练不再直接依赖本文件
+- 当前主线拓扑损失实现请使用: topology_loss_fragment_suppress.py
+
 拓扑损失目标形状消融实验模块
 
 三种 loss 模式：
