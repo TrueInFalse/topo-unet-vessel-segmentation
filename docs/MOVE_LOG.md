@@ -117,6 +117,35 @@
 
 ---
 
+## 阶段 4：日志可视化主线化（visualize 回归根目录）
+
+执行时间：2026-04-06（UTC）
+执行类型：主线工具扶正（迁移 + 重构）
+
+### 1) 迁移记录（old path -> new path）
+
+| old path | new path | status |
+|---|---|---|
+| `legacy/visualize_results.py` | `visualize_results.py` | `MOVED` |
+
+### 2) 未找到文件
+
+- 无（目标文件存在并已迁移）。
+
+### 3) 路径风险
+
+检查范围：`*.py`、`*.sh`、`*.yaml`、`*.yml`
+
+- 风险项：0 个
+- 无风险项：1 个
+
+说明：
+
+- 未检测到代码对 `legacy/visualize_results.py` 的直接引用。
+- 发现 `legacy/train_baseline.py` 中存在对 `visualize_results.py` 的调用提示，迁移后该提示仍可工作。
+
+---
+
 ## 统一约束执行确认
 
 - 未删除任何文件。

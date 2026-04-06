@@ -1,6 +1,6 @@
 # REPO MAP
 
-更新时间：2026-04-05（UTC）
+更新时间：2026-04-06（UTC）
 
 ## 范围说明
 
@@ -30,6 +30,7 @@
 | `train_baseline_roi.py` | 主线 Baseline-ROI 训练入口。 |
 | `train_topo_roi.py` | 主线 Topo-ROI 训练入口（默认 fragment_suppress）。 |
 | `evaluate.py` | 评估脚本入口。 |
+| `visualize_results.py` | 主线训练日志曲线可视化入口（2x3 子图）。 |
 | `logs/training_baseline_roi_log.csv` | 当前基线主证据日志。 |
 | `logs/fragment_suppress_125e.csv` | 当前最佳 topo 主证据日志。 |
 | `logs/fragment_suppress_125e.log` | 当前最佳 topo 训练过程日志。 |
@@ -54,7 +55,6 @@
 | `legacy/topology_loss.py` | 旧拓扑损失模块归档。 |
 | `legacy/train_baseline.py` | 旧 Baseline 训练入口归档。 |
 | `legacy/train_with_topology.py` | 旧 Topology 训练入口归档。 |
-| `legacy/visualize_results.py` | 旧可视化脚本归档。 |
 | `legacy/项目结构260315.png` | 历史结构图归档。 |
 | `legacy/topology_loss_ablation.py` | 历史消融实现保留文件（非默认主线依赖）。 |
 | `experiments/roi_aligned_20e/*` | ROI 20e 阶段实验快照（脚本+日志）。 |
@@ -112,4 +112,5 @@
 - 追加阶段：旧主入口脚本收束到 `legacy/`（不改逻辑、不改 import、不删文件）。
 - 主线 topo loss 扶正：默认实现已切换为 `topology_loss_fragment_suppress.py`。
 - `legacy/topology_loss_ablation.py` 作为历史消融文件保留，不再作为默认主线依赖。
+- 日志可视化已扶正：`visualize_results.py` 迁回根目录并作为主线入口。
 - 详细逐条迁移见 `docs/MOVE_LOG.md`。

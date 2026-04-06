@@ -44,6 +44,7 @@
 - 配置文件：`config.yaml`（主配置母版）、`config_125e.yaml`（125e 主线配置）
 - 主线拓扑模块：`topology_loss_fragment_suppress.py`（默认）
 - 主线数据加载：`data_combined.py`
+- 主线日志可视化：`visualize_results.py`（训练日志 2x3 曲线图）
 
 `train_topo_roi.py` 当前入口规则：
 
@@ -128,6 +129,16 @@ python train_topo_roi.py --config config_125e.yaml
 python evaluate.py --split val
 ```
 
+### 6) 训练日志可视化（主线）
+
+输入：`logs/` 下任意训练 CSV（路径由 `--log-file` 指定，不写死目录）。
+输出：默认 `results/<csv_stem>.png`，可用 `--output` 自定义。
+
+```bash
+python visualize_results.py --log-file logs/20260405_baseline_roi_125e.csv --mode auto
+python visualize_results.py --log-file logs/20260405_topo_roi_fragment_suppress_125e.csv --title "Topo ROI Fragment-Suppress"
+```
+
 ---
 
 ## 仓库结构（主线化视图）
@@ -144,6 +155,7 @@ python evaluate.py --split val
 ├── topology_loss_fragment_suppress.py
 ├── utils_metrics.py
 ├── evaluate.py
+├── visualize_results.py
 ├── docs/
 │   ├── REPO_MAP.md
 │   ├── MOVE_LOG.md
