@@ -36,9 +36,9 @@
 
 ## 6) 入口一致性状态（已修正）
 
-- `train_topo_roi.py` 已支持 `--config` 参数（默认读取 `config.yaml`）。
-- `--epochs` 默认值已改为 `None`，仅显式传入时覆盖 YAML 的 `training.max_epochs`。
-- `--loss-mode` 默认值已改为 `fragment_suppress`（其他值仅兼容提示，不作为主线分支）。
+- `train_baseline_roi.py` 与 `train_topo_roi.py` 均支持 `--config` 参数（默认读取 `config.yaml`）。
+- 两个脚本的 `--epochs` 默认值均为 `None`，仅显式传入时覆盖 YAML 的 `training.max_epochs`。
+- `train_topo_roi.py` 的 `--loss-mode` 仅保留兼容入口：主线固定使用 `fragment_suppress`，非该值不会切换实际 loss。
 - 规则文档：`docs/TRAIN_TOPO_ENTRY_RULES.md`。
 
 ## 30 秒口播版

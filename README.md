@@ -46,11 +46,11 @@
 - 主线数据加载：`data_combined.py`
 - 主线日志可视化：`visualize_results.py`（训练日志 2x3 曲线图）
 
-`train_topo_roi.py` 当前入口规则：
+`train_baseline_roi.py` 与 `train_topo_roi.py` 当前入口规则：
 
-- 默认读取：`config.yaml`（可用 `--config` 指定）
-- `--epochs` 默认 `None`，仅显式传入才覆盖 YAML
-- `--loss-mode` 默认 `fragment_suppress`
+- 两个脚本都支持 `--config`，默认读取 `config.yaml`
+- 两个脚本都支持 `--epochs`，默认 `None`，仅显式传入时覆盖 YAML 的 `training.max_epochs`
+- Topo 脚本的 `--loss-mode` 仅保留兼容入口：主线固定使用 `fragment_suppress`，传入 `standard`/`main_component` 不会切换实际 loss
 - 详细规则：见 `docs/TRAIN_TOPO_ENTRY_RULES.md`
 
 历史文件说明（仅复盘）：
@@ -111,16 +111,29 @@ pip install cripser
 - 日常主配置：`config.yaml`
 - 主线 125e：`config_125e.yaml`
 
-### 3) 训练 Baseline-ROI
+### 3) 训练 Baseline-ROI（主线推荐）
 
 ```bash
-python train_baseline_roi.py
+python train_baseline_roi.py --config config.yaml
 ```
 
-### 4) 训练 Topo-ROI（推荐显式指定 125e 配置）
+### 4) 训练 Topo-ROI（主线推荐）
 
 ```bash
-python train_topo_roi.py --config config_125e.yaml
+python train_topo_roi.py --config config.yaml
+```
+
+可选（临时覆盖 epoch）：
+
+```bash
+python train_baseline_roi.py --config config.yaml --epochs 3
+python train_topo_roi.py --config config.yaml --epochs 3
+```
+
+可选（兼容提示入口，不会切换主线 loss）：
+
+```bash
+python train_topo_roi.py --config config.yaml --loss-mode standard
 ```
 
 ### 5) 评估（可选）

@@ -1,57 +1,42 @@
 # TRAIN TOPO ENTRY RULES
 
-更新时间：2026-04-05（UTC）
+更新时间：2026-04-08（UTC）
 
-## 1) 默认拓扑损失实现
+## 1) 入口一致性（Baseline / Topo）
+
+- `train_baseline_roi.py` 与 `train_topo_roi.py` 都支持 `--config`，默认值都是 `config.yaml`。
+- `--epochs` 在两个脚本中默认都是 `None`，仅显式传入时覆盖 YAML 的 `training.max_epochs`。
+- 因此：不传 `--epochs` 时按 YAML 生效；传入 `--epochs` 时以 CLI 为准。
+
+## 2) 默认拓扑损失实现
 
 - 当前默认主线实现：`topology_loss_fragment_suppress.py`
 - 历史消融保留文件：`legacy/topology_loss_ablation.py`（不作为默认主线依赖）
 
-## 2) 默认读取的配置文件
-
-- 脚本：`train_topo_roi.py`
-- 参数：`--config`
-- 默认值：`config.yaml`
-
-说明：不传 `--config` 时，脚本读取 `config.yaml`；传入后按显式路径读取。
-
-## 3) epochs 优先级规则
-
-优先级：
-
-1. 命令行 `--epochs`（仅在显式传入时生效）
-2. YAML 中的 `training.max_epochs`
-
-规则细化：
-
-- `--epochs` 默认值为 `None`
-- 当 `--epochs` 为 `None` 时，不覆盖 YAML
-- 仅当用户显式传入 `--epochs` 时，才覆盖 `training.max_epochs`
-
-## 4) loss_mode 默认值
+## 3) Topo 脚本的 `--loss-mode` 真实行为
 
 - 参数：`--loss-mode`
 - 默认值：`fragment_suppress`
 - 兼容可选值：`standard`、`main_component`、`fragment_suppress`
-- 主线行为：训练时固定使用 `fragment_suppress`（非主线值仅作兼容提示）
+- 主线行为：训练时固定使用 `fragment_suppress`。
+- 说明：传入 `standard`/`main_component` 仅输出兼容提示，不会切换实际 loss 数学逻辑。
 
-## 5) 当前推荐运行命令
-
-推荐主线（显式固定 125e 配置）：
+## 4) 当前推荐运行命令（主线）
 
 ```bash
-python train_topo_roi.py --config config_125e.yaml
+python train_baseline_roi.py --config config.yaml
+python train_topo_roi.py --config config.yaml
 ```
 
 可选（临时覆盖轮数）：
 
 ```bash
-python train_topo_roi.py --config config_125e.yaml --epochs 150
+python train_baseline_roi.py --config config.yaml --epochs 3
+python train_topo_roi.py --config config.yaml --epochs 3
 ```
 
-可选（临时切换 loss_mode 做对照入口兼容）：
+可选（兼容提示入口，不会切换主线 loss）：
 
 ```bash
-python train_topo_roi.py --config config_125e.yaml --loss-mode standard
+python train_topo_roi.py --config config.yaml --loss-mode standard
 ```
-

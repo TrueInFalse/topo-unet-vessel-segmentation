@@ -526,7 +526,7 @@ def main():
                         help='训练轮数（仅显式传入时覆盖yaml中的training.max_epochs）')
     parser.add_argument('--loss-mode', type=str, default='fragment_suppress',
                         choices=['standard', 'main_component', 'fragment_suppress'],
-                        help='Topo loss模式（默认: fragment_suppress）')
+                        help='Topo loss模式参数（主线固定fragment_suppress；standard/main_component仅兼容提示，不会切换实际loss）')
     args = parser.parse_args()
 
     with open(args.config, 'r') as f:
@@ -537,12 +537,17 @@ def main():
     if args.epochs is not None:
         config['training']['max_epochs'] = args.epochs
 
+    requested_loss_mode = args.loss_mode
+    effective_loss_mode = 'fragment_suppress'
+
     print(f"\n{'='*60}")
     print(f"Config: {args.config}")
     print(f"Max Epochs: {config['training']['max_epochs']} ({'CLI override' if args.epochs is not None else 'from yaml'})")
-    print(f"Topo Loss: Fragment-Suppress (主线)")
+    if requested_loss_mode == effective_loss_mode:
+        print(f"Topo Loss Mode: {effective_loss_mode} (mainline)")
+    else:
+        print(f"Topo Loss Mode: {effective_loss_mode} (requested: {requested_loss_mode}; compatibility-only, ignored)")
     print(f"{'='*60}\n")
-
     trainer = TrainerWithTopologyROI(config, args)
     train_loader, val_loader, _ = get_combined_loaders(config)
     trainer.train(train_loader, val_loader)

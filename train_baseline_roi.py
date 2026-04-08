@@ -445,27 +445,44 @@ def set_seed(seed: int = 42) -> None:
     torch.backends.cudnn.benchmark = False
 
 
-def main(config_path: str = 'config.yaml') -> None:
+def main() -> None:
     """主函数。"""
-    with open(config_path, 'r', encoding='utf-8') as f:
+    import argparse
+
+    parser = argparse.ArgumentParser(description='U-Net基线训练脚本（ROI对齐版）')
+    parser.add_argument('--config', type=str, default='config.yaml',
+                        help='配置文件路径（默认: config.yaml）')
+    parser.add_argument('--epochs', type=int, default=None,
+                        help='训练轮数（仅显式传入时覆盖yaml中的training.max_epochs）')
+    args = parser.parse_args()
+
+    with open(args.config, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
-    
+
     set_seed(config['training'].get('seed', 42))
-    
+
+    if args.epochs is not None:
+        config['training']['max_epochs'] = args.epochs
+
+    print(f"\n{'='*60}")
+    print(f"Config: {args.config}")
+    print(f"Max Epochs: {config['training']['max_epochs']} ({'CLI override' if args.epochs is not None else 'from yaml'})")
+    print(f"{'='*60}\n")
+
     device = config['training']['device']
     if device == 'cuda' and not torch.cuda.is_available():
         print('CUDA不可用，切换到CPU')
         device = 'cpu'
-    
+
     print(f"当前数据模式: {'Kaggle联合' if config['data']['use_kaggle_combined'] else '纯DRIVE'}")
     print('加载数据...')
     train_loader, val_loader, _ = get_combined_loaders(config)
-    
+
     trainer = Trainer(config, device)
     trainer.train(train_loader, val_loader)
-    
+
     print('\n训练完成！')
 
 
 if __name__ == '__main__':
-    main('config.yaml')
+    main()

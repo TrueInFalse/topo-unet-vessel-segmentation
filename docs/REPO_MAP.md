@@ -27,8 +27,8 @@
 | `model_unet.py` | U-Net 模型定义。 |
 | `utils_metrics.py` | 指标计算（像素+拓扑）。 |
 | `topology_loss_fragment_suppress.py` | 当前默认主线拓扑损失实现。 |
-| `train_baseline_roi.py` | 主线 Baseline-ROI 训练入口。 |
-| `train_topo_roi.py` | 主线 Topo-ROI 训练入口（默认 fragment_suppress）。 |
+| `train_baseline_roi.py` | 主线 Baseline-ROI 训练入口（支持 `--config`/`--epochs`）。 |
+| `train_topo_roi.py` | 主线 Topo-ROI 训练入口（支持 `--config`/`--epochs`；主线固定 fragment_suppress）。 |
 | `evaluate.py` | 评估脚本入口。 |
 | `visualize_results.py` | 主线训练日志曲线可视化入口（2x3 子图）。 |
 | `logs/20260405_baseline_roi_125e.csv` | 当前基线主证据日志（125e）。 |
