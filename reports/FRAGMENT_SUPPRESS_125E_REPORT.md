@@ -1,5 +1,12 @@
 # Fragment Suppress 125 Epoch 主线验证报告
 
+> [!IMPORTANT]
+> **历史说明（2026-04-08 更新）**
+> - 本报告是阶段性历史分析，采用了 `30e Baseline` 对照 `125e Topo` 的旧口径。
+> - 该口径不再用于当前主线 best-vs-best 结论。
+> - 当前主线统一证据以 `logs/20260405_baseline_roi_125e.csv` 与 `logs/20260405_topo_roi_fragment_suppress_125e.csv` 为准。
+> - 论文、README、答辩材料不应继续引用本报告中的“差距 0.78% / 接近甚至可能超过 baseline”结论。
+
 **实验日期**: 2026-03-07  
 **实验目的**: 验证修正 PD→loss 映射方向后，拓扑约束是否具备接近或超过 Baseline 的实际潜力  
 **核心问题**: "在修正 PD→loss 映射方向后，拓扑约束是否已经具备接近或超过 Baseline 的实际潜力？"

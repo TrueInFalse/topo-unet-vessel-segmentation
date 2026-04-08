@@ -29,10 +29,10 @@
 ## 当前状态（主线结论）
 
 - 当前最强结果：`Baseline-ROI 125e`（`best val_dice = 0.7841`，epoch 72；125e 末尾约 `0.7814`）
-- 当前最佳 Topo：`Fragment-Suppress`（125e，`best val_dice = 0.7618`，epoch 114）
-- 当前结论：修正 PD→loss 方向后，Topo 已接近可用；但在严格 125e 对照下仍略低于 Baseline
+- 当前最佳 Topo：`Fragment-Suppress`（125e，`best val_dice = 0.7615`，epoch 119；125e 末尾 `val_dice = 0.7611`，epoch 125）
+- 当前结论：修正 PD→loss 方向后，Topo 已具备可用性；但在严格 125e 对照下仍落后 Baseline 约 0.02 Dice
 
-一句话：当前主线是“强 Baseline + 可用但略落后的 Topo”。
+一句话：当前主线是“强 Baseline + 可用但落后约 0.02 Dice 的 Topo”。
 
 ---
 

@@ -1,6 +1,6 @@
 # REPO MAP
 
-更新时间：2026-04-06（UTC）
+更新时间：2026-04-08（UTC）
 
 ## 范围说明
 
@@ -31,9 +31,9 @@
 | `train_topo_roi.py` | 主线 Topo-ROI 训练入口（默认 fragment_suppress）。 |
 | `evaluate.py` | 评估脚本入口。 |
 | `visualize_results.py` | 主线训练日志曲线可视化入口（2x3 子图）。 |
-| `logs/training_baseline_roi_log.csv` | 当前基线主证据日志。 |
-| `logs/fragment_suppress_125e.csv` | 当前最佳 topo 主证据日志。 |
-| `logs/fragment_suppress_125e.log` | 当前最佳 topo 训练过程日志。 |
+| `logs/20260405_baseline_roi_125e.csv` | 当前基线主证据日志（125e）。 |
+| `logs/20260405_topo_roi_fragment_suppress_125e.csv` | 当前最佳 topo 主证据日志（125e）。 |
+| `reports/MAINLINE_RESULTS_SUMMARY.md` | 当前主线统一摘要（论文/README/PPT 共用口径）。 |
 | `checkpoints/best_model_baseline_roi.pth` | 当前最强 Baseline 权重。 |
 | `checkpoints/best_model_topo_roi.pth` | Topo-ROI 最佳权重。 |
 | `checkpoints/final_model_topo_roi.pth` | Topo-ROI 最终权重。 |

@@ -1,10 +1,23 @@
 # NEXT ONE THING
-2026.4.5
+
+
+**2026.4.8**
+
+- 主线保留 Fragment-Suppress，辅以**有限调参**；
+
+- Hu 2019 用来支撑论文叙事与方法定位；**clDice 只做评估补充**；
+
+- 把剩下时间砸在**证据链、图表、正文、答辩表达**上。
+
+
+---
+
+**2026.4.5**
 
 ## 唯一任务
 
 在完全固定主线口径（Kaggle 联合数据、`roi_mode=fov`、ROI 内 Dice、125 epoch、同随机种子）下，
-仅对 `fragment_suppress` 做 **单变量优化**，把 Topo 与最强 Baseline 的 Dice 差距从 `0.0223` 缩小到 `<= 0.0100`。
+仅对 `fragment_suppress` 做 **单变量优化**，把 Topo 与最强 Baseline 的 Dice 差距从 `0.0226` 缩小到 `<= 0.0100`。
 
 ## 任务边界（今天不做新分支）
 
@@ -23,7 +36,7 @@
 
 ## 执行顺序（单线程）
 
-1. 以当前最佳 `fragment_suppress` 配置为起点（best Dice 0.7618）。
+1. 以当前最佳 `fragment_suppress` 配置为起点（best Dice 0.7615）。
 2. 只改一个参数并完成 125e 训练。
 3. 与 `Baseline-ROI best=0.7841` 做同表对比，决定保留/回滚。
 
@@ -34,5 +47,5 @@
 
 ## 为什么是这一个
 
-- Baseline 已经够强（0.7841），主矛盾只剩 Topo 的最后 2.23 个 Dice 点。
+- Baseline 已经够强（0.7841），主矛盾只剩 Topo 的最后 2.26 个 Dice 点。
 - Topo 主线已明确为 `fragment_suppress`，继续分叉只会增加混乱。
