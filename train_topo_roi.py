@@ -32,7 +32,12 @@ import segmentation_models_pytorch as smp
 
 from data_combined import get_combined_loaders
 from model_unet import get_unet_model, count_parameters
-from utils_metrics import compute_basic_metrics, compute_topology_metrics, tensor_to_numpy
+from utils_metrics import (
+    compute_basic_metrics,
+    compute_topology_metrics,
+    summarize_topology_results,
+    tensor_to_numpy,
+)
 from topology_loss_fragment_suppress import TopologicalRegularizerFragmentSuppress
 
 
@@ -220,7 +225,8 @@ class TrainerWithTopologyROI:
             with open(self.log_file, 'w') as f:
                 f.write('epoch,train_loss,train_dice,train_dice_loss_roi,train_loss_topo,'
                        'val_dice,val_iou,val_precision,val_recall,'
-                       'cl_break,delta_beta0,lambda,lr,'
+                       'cl_break,delta_beta0,pred_beta0,target_beta0,max_lifetime,fragments_mean,'
+                       'topology_valid_count,topology_invalid_count,lambda,lr,'
                        'topo_loss_raw,topo_loss_scaled,ratio,'
                        'roi_mode,roi_mean\n')
     
@@ -264,6 +270,9 @@ class TrainerWithTopologyROI:
         total_topo_scaled = 0.0
         total_ratio = 0.0
         total_roi_mean = 0.0
+        pd_max_lifetimes: List[float] = []
+        pd_fragments_means: List[float] = []
+        last_pd_stats_sample: Optional[Dict[str, float]] = None
         
         num_batches = len(train_loader)
         current_lambda = self.lambda_scheduler.get_lambda(epoch_idx)
@@ -296,6 +305,12 @@ class TrainerWithTopologyROI:
             # 拓扑损失
             pred = torch.sigmoid(outputs)
             loss_topo = self.criterion_topo(pred, rois, self.current_epoch)
+            batch_pd_stats = self.criterion_topo.get_last_pd_stats()
+            if batch_pd_stats:
+                last_pd_stats_sample = batch_pd_stats[0]
+                for sample_stats in batch_pd_stats:
+                    pd_max_lifetimes.append(float(sample_stats.get('max_lifetime', float('nan'))))
+                    pd_fragments_means.append(float(sample_stats.get('fragments_mean', float('nan'))))
             
             # 计算各类损失值
             topo_raw = loss_topo.item() / loss_scale if loss_scale > 0 else loss_topo.item()
@@ -327,8 +342,10 @@ class TrainerWithTopologyROI:
             
             self.global_step += 1
         
-        # 收集PD统计信息（用于主线训练诊断）
-        pd_stats = self.criterion_topo.get_last_pd_stats()
+        finite_max_lifetimes = [value for value in pd_max_lifetimes if np.isfinite(value)]
+        finite_fragments_means = [value for value in pd_fragments_means if np.isfinite(value)]
+        train_max_lifetime = float(np.nanmean(finite_max_lifetimes)) if finite_max_lifetimes else float('nan')
+        train_fragments_mean = float(np.nanmean(finite_fragments_means)) if finite_fragments_means else float('nan')
         
         stats = {
             'avg_loss': total_loss / num_batches,
@@ -339,7 +356,9 @@ class TrainerWithTopologyROI:
             'avg_topo_scaled': total_topo_scaled / num_batches,
             'avg_ratio': total_ratio / num_batches,
             'roi_mean': total_roi_mean / num_batches,
-            'pd_stats': pd_stats[0] if pd_stats else None,  # 取第一个样本的统计
+            'train_max_lifetime': train_max_lifetime,
+            'train_fragments_mean': train_fragments_mean,
+            'pd_stats': last_pd_stats_sample,
         }
         
         return stats
@@ -376,7 +395,7 @@ class TrainerWithTopologyROI:
         all_rois = torch.cat(all_rois, dim=0).cpu().numpy()
         
         all_dice, all_iou, all_prec, all_rec = [], [], [], []
-        all_cl_break, all_delta_beta0 = [], []
+        all_topology_results = []
         
         for i in range(len(all_preds)):
             roi = all_rois[i, 0] if all_rois.ndim == 4 else all_rois[i]
@@ -389,19 +408,30 @@ class TrainerWithTopologyROI:
             
             try:
                 topo_m = compute_topology_metrics(all_preds[i, 0], all_masks[i, 0], roi)
-                all_cl_break.append(topo_m['cl_break'])
-                all_delta_beta0.append(topo_m['delta_beta0'])
-            except Exception:
-                all_cl_break.append(0.0)
-                all_delta_beta0.append(0.0)
+            except Exception as exc:
+                topo_m = {
+                    'cl_break': float('nan'),
+                    'delta_beta0': float('nan'),
+                    'pred_beta0': float('nan'),
+                    'target_beta0': float('nan'),
+                    'valid': False,
+                    'error': str(exc),
+                }
+            all_topology_results.append(topo_m)
+
+        topology_summary = summarize_topology_results(all_topology_results)
         
         metrics = {
             'dice': np.mean(all_dice),
             'iou': np.mean(all_iou),
             'precision': np.mean(all_prec),
             'recall': np.mean(all_rec),
-            'cl_break': np.mean(all_cl_break) if all_cl_break else 0.0,
-            'delta_beta0': np.mean(all_delta_beta0) if all_delta_beta0 else 0.0
+            'cl_break': topology_summary.get('cl_break', float('nan')),
+            'delta_beta0': topology_summary.get('delta_beta0', float('nan')),
+            'pred_beta0': topology_summary.get('pred_beta0', float('nan')),
+            'target_beta0': topology_summary.get('target_beta0', float('nan')),
+            'topology_valid_count': topology_summary.get('valid_count', 0),
+            'topology_invalid_count': topology_summary.get('invalid_count', 0),
         }
         
         return metrics
@@ -436,6 +466,8 @@ class TrainerWithTopologyROI:
             train_topo_scaled = train_stats['avg_topo_scaled']
             train_ratio = train_stats['avg_ratio']
             train_roi_mean = train_stats['roi_mean']
+            train_max_lifetime = train_stats.get('train_max_lifetime', float('nan'))
+            train_fragments_mean = train_stats.get('train_fragments_mean', float('nan'))
             
             val_metrics = self.validate(val_loader)
             val_dice = val_metrics['dice']
@@ -453,6 +485,8 @@ class TrainerWithTopologyROI:
             print(f'  Train Dice Loss (ROI): {train_dice_loss_roi:.4f} | Train Dice (ROI): {train_dice:.4f} | Train Topo: {train_loss_topo:.4f}')
             print(f'  Val Dice: {val_dice:.4f} | Val IoU: {val_metrics["iou"]:.4f} | Val Prec: {val_metrics["precision"]:.4f} | Val Rec: {val_metrics["recall"]:.4f}')
             print(f'  CL-Break: {val_metrics.get("cl_break", 0):.1f} | Δβ₀: {val_metrics.get("delta_beta0", 0):.1f}')
+            print(f'  β₀(pred/target): {val_metrics.get("pred_beta0", float("nan")):.1f}/{val_metrics.get("target_beta0", float("nan")):.1f} | TopoValid/Invalid: {int(val_metrics.get("topology_valid_count", 0))}/{int(val_metrics.get("topology_invalid_count", 0))}')
+            print(f'  Train PD MaxLifetime: {train_max_lifetime:.4f} | Train PD FragmentsMean: {train_fragments_mean:.4f}')
             print(f'  Ratio: {train_ratio:.4f} | TopoScaled: {train_topo_scaled:.4f}')
             print(f'  ROI Mean: {train_roi_mean:.4f} | ROI Mode: {roi_mode}')
             print(f'  Each Time: {self.format_time(epoch_time)} | Total Time: {self.format_time(elapsed)} | ETA: {self.format_time(eta)} | LR: {current_lr:.6f}')
@@ -469,7 +503,10 @@ class TrainerWithTopologyROI:
             with open(self.log_file, 'a') as f:
                 f.write(f'{self.current_epoch},{train_loss:.4f},{train_dice:.4f},{train_dice_loss_roi:.6f},{train_loss_topo:.4f},'
                        f'{val_dice:.4f},{val_metrics["iou"]:.4f},{val_metrics["precision"]:.4f},{val_metrics["recall"]:.4f},'
-                       f'{val_metrics.get("cl_break", 0):.1f},{val_metrics.get("delta_beta0", 0):.1f},'
+                       f'{val_metrics.get("cl_break", float("nan")):.1f},{val_metrics.get("delta_beta0", float("nan")):.1f},'
+                       f'{val_metrics.get("pred_beta0", float("nan")):.1f},{val_metrics.get("target_beta0", float("nan")):.1f},'
+                       f'{train_max_lifetime:.6f},{train_fragments_mean:.6f},'
+                       f'{int(val_metrics.get("topology_valid_count", 0))},{int(val_metrics.get("topology_invalid_count", 0))},'
                        f'{current_lambda:.3f},{current_lr:.6f},'
                        f'{train_topo_raw:.6f},{train_topo_scaled:.6f},{train_ratio:.6f},'
                        f'{roi_mode},{train_roi_mean:.4f}\n')
