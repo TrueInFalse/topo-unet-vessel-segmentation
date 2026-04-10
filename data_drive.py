@@ -288,7 +288,8 @@ class DRIVEDataset(Dataset):
 
 
 def get_drive_loaders(
-    config_path: str = 'config.yaml'
+    config_path: str = 'config.yaml',
+    config: Optional[dict] = None
 ) -> Tuple[DataLoader, DataLoader, Optional[DataLoader]]:
     """创建DRIVE数据加载器。
     
@@ -302,8 +303,9 @@ def get_drive_loaders(
         val_loader: 验证数据加载器
         test_loader: 测试数据加载器（若配置中有test_ids）
     """
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = yaml.safe_load(f)
+    if config is None:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = yaml.safe_load(f)
     
     data_cfg = config['data']
     train_cfg = config.get('training', {})

@@ -21,8 +21,8 @@ Python版本: 3.12+
   - v1.1: 修正Betti数计算，添加ROI掩码约束
 """
 
-from typing import Dict, Tuple, Optional
-from dataclasses import dataclass, field
+from typing import Dict, List, Tuple, Optional
+from dataclasses import dataclass
 
 import numpy as np
 import torch
@@ -43,10 +43,65 @@ class MetricsResult:
     # 拓扑指标（仅在ROI区域内计算）
     cl_break: float = 0.0      # 中心线碎片数（越高越差）
     delta_beta0: float = 0.0   # Betti₀误差（连通分量数差异）
+    pred_beta0: float = float('nan')
+    target_beta0: float = float('nan')
+    pred_fragments: float = float('nan')
+    target_fragments: float = float('nan')
+    topology_valid: bool = True
+    topology_message: str = ""
     
     # 辅助信息
     valid: bool = True         # 指标是否有效
     message: str = ""          # 异常信息
+
+
+TOPOLOGY_METRIC_KEYS = (
+    'cl_break',
+    'delta_beta0',
+    'pred_beta0',
+    'target_beta0',
+    'pred_fragments',
+    'target_fragments',
+)
+
+
+def _topology_failure(message: str) -> Dict[str, float]:
+    failed = {key: float('nan') for key in TOPOLOGY_METRIC_KEYS}
+    failed['valid'] = False
+    failed['error'] = message
+    return failed
+
+
+def is_valid_topology_result(result: Optional[Dict[str, float]]) -> bool:
+    """判断拓扑指标是否可参与聚合。"""
+    if not result:
+        return False
+    if not bool(result.get('valid', True)):
+        return False
+
+    for key in ('cl_break', 'delta_beta0'):
+        if not np.isfinite(result.get(key, float('nan'))):
+            return False
+
+    return True
+
+
+def summarize_topology_results(results: List[Dict[str, float]]) -> Dict[str, float]:
+    """汇总拓扑指标，只对有效样本求均值。"""
+    valid_results = [result for result in results if is_valid_topology_result(result)]
+    summary = {key: float('nan') for key in TOPOLOGY_METRIC_KEYS}
+    summary['valid_count'] = len(valid_results)
+    summary['invalid_count'] = len(results) - len(valid_results)
+    summary['total_count'] = len(results)
+
+    if not valid_results:
+        return summary
+
+    for key in TOPOLOGY_METRIC_KEYS:
+        values = [float(result.get(key, float('nan'))) for result in valid_results]
+        summary[key] = float(np.nanmean(values))
+
+    return summary
 
 
 def apply_roi_mask(
@@ -307,20 +362,12 @@ def compute_topology_metrics(
             'pred_beta0': float(pred_beta0),
             'target_beta0': float(target_beta0),
             'pred_fragments': float(pred_fragments),
-            'target_fragments': float(target_fragments)
+            'target_fragments': float(target_fragments),
+            'valid': True
         }
         
     except Exception as e:
-        # 拓扑计算失败时返回默认值
-        return {
-            'cl_break': -1.0,
-            'delta_beta0': -1.0,
-            'pred_beta0': -1.0,
-            'target_beta0': -1.0,
-            'pred_fragments': -1.0,
-            'target_fragments': -1.0,
-            'error': str(e)
-        }
+        return _topology_failure(str(e))
 
 
 def compute_all_metrics(
@@ -357,7 +404,13 @@ def compute_all_metrics(
         topo = compute_topology_metrics(pred, target, roi_mask, threshold)
         result.cl_break = topo['cl_break']
         result.delta_beta0 = topo['delta_beta0']
-    
+        result.pred_beta0 = topo.get('pred_beta0', float('nan'))
+        result.target_beta0 = topo.get('target_beta0', float('nan'))
+        result.pred_fragments = topo.get('pred_fragments', float('nan'))
+        result.target_fragments = topo.get('target_fragments', float('nan'))
+        result.topology_valid = bool(topo.get('valid', True))
+        result.topology_message = topo.get('error', '')
+
     return result
 
 
@@ -398,6 +451,7 @@ class MetricsTracker:
     def __init__(self):
         self.metrics_sum: Dict[str, float] = {}
         self.count: int = 0
+        self.topology_count: int = 0
     
     def update(self, metrics: MetricsResult) -> None:
         """更新指标累积。"""
@@ -408,15 +462,23 @@ class MetricsTracker:
             'dice': metrics.dice,
             'iou': metrics.iou,
             'precision': metrics.precision,
-            'recall': metrics.recall,
-            'cl_break': metrics.cl_break,
-            'delta_beta0': metrics.delta_beta0
+            'recall': metrics.recall
         }
         
         for key, value in metrics_dict.items():
             if key not in self.metrics_sum:
                 self.metrics_sum[key] = 0.0
             self.metrics_sum[key] += value
+
+        if metrics.topology_valid:
+            for key, value in {
+                'cl_break': metrics.cl_break,
+                'delta_beta0': metrics.delta_beta0
+            }.items():
+                if key not in self.metrics_sum:
+                    self.metrics_sum[key] = 0.0
+                self.metrics_sum[key] += value
+            self.topology_count += 1
         
         self.count += 1
     
@@ -425,12 +487,20 @@ class MetricsTracker:
         if self.count == 0:
             return {k: 0.0 for k in self.metrics_sum.keys()}
         
-        return {k: v / self.count for k, v in self.metrics_sum.items()}
+        averages: Dict[str, float] = {}
+        for key, value in self.metrics_sum.items():
+            if key in {'cl_break', 'delta_beta0'}:
+                averages[key] = value / self.topology_count if self.topology_count > 0 else float('nan')
+            else:
+                averages[key] = value / self.count
+
+        return averages
     
     def reset(self) -> None:
         """重置累积。"""
         self.metrics_sum.clear()
         self.count = 0
+        self.topology_count = 0
 
 
 if __name__ == '__main__':

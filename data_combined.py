@@ -48,11 +48,9 @@ def get_combined_loaders(config: dict) -> Tuple[DataLoader, DataLoader, Optional
         print("=" * 60)
         print("纯DRIVE模式: 16 train + 4 val")
         print("=" * 60)
-        return _get_drive_loaders_original(config_path='config.yaml')
-    else:
-        if not HAS_KAGGLEHUB:
-            raise ValueError("需要kagglehub。安装: pip install kagglehub")
-        return _get_kaggle_combined_loaders(config)
+        return _get_drive_loaders_original(config=config)
+
+    return _get_kaggle_combined_loaders(config)
 
 
 def _get_kaggle_combined_loaders(config: dict) -> Tuple[DataLoader, DataLoader, Optional[DataLoader]]:
@@ -69,6 +67,8 @@ def _get_kaggle_combined_loaders(config: dict) -> Tuple[DataLoader, DataLoader, 
         print(f"路径: {dataset_path}")
         print("=" * 60)
     else:
+        if not HAS_KAGGLEHUB:
+            raise ValueError("需要kagglehub以自动下载数据集；如已存在本地 data/combined，可直接使用本地数据。")
         print("=" * 60)
         print("Kaggle联合模式: 自动下载数据集")
         print("=" * 60)

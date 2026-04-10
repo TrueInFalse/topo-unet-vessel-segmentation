@@ -17,3 +17,5 @@ __pycache__/
 *.tmp
 .DS_Store
 artifacts/
+.tmp_torch/
+.tmp_pycache/
