@@ -1,5 +1,7 @@
 # CURRENT STATUS
 
+> Runtime note: `train_baseline_roi.py` and `train_topo_roi.py` now support `--fast-dev` for short diagnostic runs, while default startup remains deterministic.
+
 更新时间：2026-04-08（UTC）
 
 ## 1) 当前最强 Baseline

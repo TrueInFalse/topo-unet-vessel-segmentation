@@ -160,6 +160,13 @@ python train_baseline_roi.py --config config.yaml
 python train_baseline_roi.py --config config.yaml --epochs 3
 ```
 
+```bash
+python train_baseline_roi.py --config config.yaml --epochs 3 --fast-dev
+```
+
+- `--fast-dev` 仅用于短诊断实验；开启后会打印 `Deterministic mode: OFF` 和 `cuDNN benchmark: ON`。
+- 正式主线结果建议保持默认确定性模式，不开启 `--fast-dev`。
+
 默认行为说明：
 
 - `--config` 默认值是 `config.yaml`。
@@ -178,6 +185,13 @@ python train_topo_roi.py --config config.yaml
 ```bash
 python train_topo_roi.py --config config.yaml --epochs 3
 ```
+
+```bash
+python train_topo_roi.py --config config.yaml --epochs 3 --fast-dev
+```
+
+- `--fast-dev` 仅用于短诊断实验；开启后会打印 `Deterministic mode: OFF` 和 `cuDNN benchmark: ON`。
+- 正式主线结果建议保持默认确定性模式，不开启 `--fast-dev`。
 
 兼容入口示例：
 
@@ -328,6 +342,13 @@ python visualize_results.py --log-file logs/20260405_topo_roi_fragment_suppress_
 - `topology_loss_fragment_suppress.py`
 - `evaluate.py`
 - `visualize_results.py`
+
+## Runtime Notes
+
+- `train_baseline_roi.py` and `train_topo_roi.py` now support `--fast-dev` for short diagnostic runs.
+- Default startup behavior remains deterministic: `Deterministic mode: ON` and `cuDNN benchmark: OFF`.
+- With `--fast-dev`, startup switches to `Deterministic mode: OFF` and `cuDNN benchmark: ON`.
+- Keep the default deterministic mode for formal mainline results and paper-facing comparisons.
 
 历史与归档文件说明：
 

@@ -434,15 +434,18 @@ class Trainer:
         print('=' * 80)
 
 
-def set_seed(seed: int = 42) -> None:
+def set_seed(seed: int = 42, fast_dev: bool = False) -> Tuple[bool, bool]:
     """设置随机种子。"""
     import random
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    deterministic = not fast_dev
+    benchmark = bool(fast_dev)
+    torch.backends.cudnn.deterministic = deterministic
+    torch.backends.cudnn.benchmark = benchmark
+    return deterministic, benchmark
 
 
 def main() -> None:
@@ -454,12 +457,17 @@ def main() -> None:
                         help='配置文件路径（默认: config.yaml）')
     parser.add_argument('--epochs', type=int, default=None,
                         help='训练轮数（仅显式传入时覆盖yaml中的training.max_epochs）')
+    parser.add_argument('--fast-dev', action='store_true',
+                        help='Disable deterministic cuDNN and enable benchmark for short diagnostic runs')
     args = parser.parse_args()
 
     with open(args.config, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
 
-    set_seed(config['training'].get('seed', 42))
+    deterministic_mode, cudnn_benchmark = set_seed(
+        config['training'].get('seed', 42),
+        fast_dev=args.fast_dev,
+    )
 
     if args.epochs is not None:
         config['training']['max_epochs'] = args.epochs
@@ -467,6 +475,8 @@ def main() -> None:
     print(f"\n{'='*60}")
     print(f"Config: {args.config}")
     print(f"Max Epochs: {config['training']['max_epochs']} ({'CLI override' if args.epochs is not None else 'from yaml'})")
+    print(f"Deterministic mode: {'ON' if deterministic_mode else 'OFF'}")
+    print(f"cuDNN benchmark: {'ON' if cudnn_benchmark else 'OFF'}")
     print(f"{'='*60}\n")
 
     device = config['training']['device']

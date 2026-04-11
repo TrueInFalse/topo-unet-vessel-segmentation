@@ -368,9 +368,14 @@ class TrainerWithTopologyROI:
         """验证"""
         self.model.eval()
         
-        all_preds = []
-        all_masks = []
-        all_rois = []
+        metric_sums = {
+            'dice': 0.0,
+            'iou': 0.0,
+            'precision': 0.0,
+            'recall': 0.0,
+        }
+        all_topology_results: List[Dict[str, float]] = []
+        num_samples = 0
         
         for batch in tqdm(val_loader, desc='Validate', leave=False):
             if isinstance(batch, (list, tuple)) and len(batch) == 3:
@@ -384,48 +389,52 @@ class TrainerWithTopologyROI:
                 rois = self._normalize_roi_tensor(batch['roi'], self.device)
             
             outputs = self.model(images)
-            pred = torch.sigmoid(outputs)
-            
-            all_preds.append(pred)
-            all_masks.append(vessels)
-            all_rois.append(rois)
-        
-        all_preds = torch.cat(all_preds, dim=0).cpu().numpy()
-        all_masks = torch.cat(all_masks, dim=0).cpu().numpy()
-        all_rois = torch.cat(all_rois, dim=0).cpu().numpy()
-        
-        all_dice, all_iou, all_prec, all_rec = [], [], [], []
-        all_topology_results = []
-        
-        for i in range(len(all_preds)):
-            roi = all_rois[i, 0] if all_rois.ndim == 4 else all_rois[i]
-            
-            m = compute_basic_metrics(all_preds[i, 0], all_masks[i, 0], roi)
-            all_dice.append(m['dice'])
-            all_iou.append(m['iou'])
-            all_prec.append(m['precision'])
-            all_rec.append(m['recall'])
-            
-            try:
-                topo_m = compute_topology_metrics(all_preds[i, 0], all_masks[i, 0], roi)
-            except Exception as exc:
-                topo_m = {
-                    'cl_break': float('nan'),
-                    'delta_beta0': float('nan'),
-                    'pred_beta0': float('nan'),
-                    'target_beta0': float('nan'),
-                    'valid': False,
-                    'error': str(exc),
-                }
-            all_topology_results.append(topo_m)
+            pred_batch = torch.sigmoid(outputs).cpu().numpy()
+            mask_batch = vessels.cpu().numpy()
+            roi_batch = rois.cpu().numpy()
+
+            for pred_sample, mask_sample, roi_sample in zip(pred_batch, mask_batch, roi_batch):
+                roi = roi_sample[0] if roi_sample.ndim == 3 else roi_sample
+
+                basic_metrics = compute_basic_metrics(pred_sample[0], mask_sample[0], roi)
+                for key in metric_sums:
+                    metric_sums[key] += basic_metrics[key]
+
+                try:
+                    topo_m = compute_topology_metrics(pred_sample[0], mask_sample[0], roi)
+                except Exception as exc:
+                    topo_m = {
+                        'cl_break': float('nan'),
+                        'delta_beta0': float('nan'),
+                        'pred_beta0': float('nan'),
+                        'target_beta0': float('nan'),
+                        'valid': False,
+                        'error': str(exc),
+                    }
+                all_topology_results.append(topo_m)
+                num_samples += 1
 
         topology_summary = summarize_topology_results(all_topology_results)
+
+        if num_samples == 0:
+            return {
+                'dice': 0.0,
+                'iou': 0.0,
+                'precision': 0.0,
+                'recall': 0.0,
+                'cl_break': float('nan'),
+                'delta_beta0': float('nan'),
+                'pred_beta0': float('nan'),
+                'target_beta0': float('nan'),
+                'topology_valid_count': 0,
+                'topology_invalid_count': 0,
+            }
         
         metrics = {
-            'dice': np.mean(all_dice),
-            'iou': np.mean(all_iou),
-            'precision': np.mean(all_prec),
-            'recall': np.mean(all_rec),
+            'dice': metric_sums['dice'] / num_samples,
+            'iou': metric_sums['iou'] / num_samples,
+            'precision': metric_sums['precision'] / num_samples,
+            'recall': metric_sums['recall'] / num_samples,
             'cl_break': topology_summary.get('cl_break', float('nan')),
             'delta_beta0': topology_summary.get('delta_beta0', float('nan')),
             'pred_beta0': topology_summary.get('pred_beta0', float('nan')),
@@ -541,15 +550,18 @@ class TrainerWithTopologyROI:
         print('=' * 80)
 
 
-def set_seed(seed: int = 42) -> None:
+def set_seed(seed: int = 42, fast_dev: bool = False) -> Tuple[bool, bool]:
     """设置随机种子"""
     import random
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    deterministic = not fast_dev
+    benchmark = bool(fast_dev)
+    torch.backends.cudnn.deterministic = deterministic
+    torch.backends.cudnn.benchmark = benchmark
+    return deterministic, benchmark
 
 
 def main():
@@ -561,6 +573,8 @@ def main():
                         help='配置文件路径（默认: config.yaml）')
     parser.add_argument('--epochs', type=int, default=None,
                         help='训练轮数（仅显式传入时覆盖yaml中的training.max_epochs）')
+    parser.add_argument('--fast-dev', action='store_true',
+                        help='Disable deterministic cuDNN and enable benchmark for short diagnostic runs')
     parser.add_argument('--loss-mode', type=str, default='fragment_suppress',
                         choices=['standard', 'main_component', 'fragment_suppress'],
                         help='Topo loss模式参数（主线固定fragment_suppress；standard/main_component仅兼容提示，不会切换实际loss）')
@@ -569,7 +583,10 @@ def main():
     with open(args.config, 'r') as f:
         config = yaml.safe_load(f)
 
-    set_seed(config['training'].get('seed', 42))
+    deterministic_mode, cudnn_benchmark = set_seed(
+        config['training'].get('seed', 42),
+        fast_dev=args.fast_dev,
+    )
 
     if args.epochs is not None:
         config['training']['max_epochs'] = args.epochs
@@ -580,6 +597,8 @@ def main():
     print(f"\n{'='*60}")
     print(f"Config: {args.config}")
     print(f"Max Epochs: {config['training']['max_epochs']} ({'CLI override' if args.epochs is not None else 'from yaml'})")
+    print(f"Deterministic mode: {'ON' if deterministic_mode else 'OFF'}")
+    print(f"cuDNN benchmark: {'ON' if cudnn_benchmark else 'OFF'}")
     if requested_loss_mode == effective_loss_mode:
         print(f"Topo Loss Mode: {effective_loss_mode} (mainline)")
     else:

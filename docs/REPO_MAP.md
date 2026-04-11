@@ -1,5 +1,7 @@
 # REPO MAP
 
+> Runtime note: the mainline training entries `train_baseline_roi.py` and `train_topo_roi.py` keep deterministic defaults and additionally expose `--fast-dev` for short diagnostic runs.
+
 更新时间：2026-04-08（UTC）
 
 ## 范围说明

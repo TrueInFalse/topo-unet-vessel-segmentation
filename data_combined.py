@@ -183,6 +183,7 @@ class KaggleCombinedDataset(Dataset):
         self.roi_mode = roi_mode.lower()
         self.roi_threshold = int(roi_threshold)
         self.roi_padding_scale = float(roi_padding_scale)
+        self._roi_cache: Dict[int, torch.Tensor] = {}
         
         self.image_files = _list_images(self.image_dir)
         if len(self.image_files) == 0:
@@ -218,12 +219,7 @@ class KaggleCombinedDataset(Dataset):
         image, mask = self._resize_and_pad(image, mask)
         
         # 基于图像内容估计FOV ROI（在训练实际输入尺寸上计算）
-        if self.roi_mode == 'ones':
-            roi_mask = torch.ones((1, image.height, image.width), dtype=torch.float32)
-        elif self.roi_mode == 'tiny':
-            roi_mask = self._create_tiny_mask(image.height, image.width)
-        else:
-            roi_mask = self._create_fov_mask_from_image(image)
+        roi_mask = self._get_roi_mask(idx, image)
 
         # 转为tensor
         image = T.ToTensor()(image)  # [3, H, W]
@@ -245,6 +241,23 @@ class KaggleCombinedDataset(Dataset):
             raise ValueError(f"ROI尺寸与图像不一致: roi={roi_mask.shape}, image={image.shape}")
 
         return image, mask, roi_mask
+
+    def _get_roi_mask(self, idx: int, image: Image.Image) -> torch.Tensor:
+        """Lazily cache ROI masks per sample within the current worker."""
+        cached_roi = self._roi_cache.get(idx)
+        image_size = (image.height, image.width)
+
+        if cached_roi is None or tuple(cached_roi.shape[-2:]) != image_size:
+            if self.roi_mode == 'ones':
+                cached_roi = torch.ones((1, image.height, image.width), dtype=torch.float32)
+            elif self.roi_mode == 'tiny':
+                cached_roi = self._create_tiny_mask(image.height, image.width)
+            else:
+                cached_roi = self._create_fov_mask_from_image(image)
+
+            self._roi_cache[idx] = cached_roi.clone()
+
+        return cached_roi.clone()
 
     def _create_fov_mask_from_image(self, image: Image.Image) -> torch.Tensor:
         """基于图像内容估计FOV，并拟合椭圆ROI。

@@ -208,6 +208,18 @@ def compute_betti0(image: np.ndarray) -> int:
     return num_features
 
 
+def _component_sizes(labeled_array: np.ndarray, num_features: int) -> np.ndarray:
+    """Return foreground component sizes for a labeled array."""
+    if num_features <= 0:
+        return np.empty(0, dtype=np.int64)
+
+    component_sizes = np.bincount(
+        labeled_array.ravel(),
+        minlength=num_features + 1,
+    )
+    return component_sizes[1:num_features + 1]
+
+
 def compute_betti0_filtered(image: np.ndarray, min_size: int = 20) -> int:
     """计算过滤后的Betti数β₀（忽略小组件）。
     
@@ -226,14 +238,8 @@ def compute_betti0_filtered(image: np.ndarray, min_size: int = 20) -> int:
     if num_features == 0:
         return 0
     
-    # 统计每个组件的大小
-    valid_components = 0
-    for i in range(1, num_features + 1):
-        component_size = np.sum(labeled_array == i)
-        if component_size >= min_size:
-            valid_components += 1
-    
-    return valid_components
+    component_sizes = _component_sizes(labeled_array, num_features)
+    return int(np.count_nonzero(component_sizes >= min_size))
 
 
 def skeletonize_vessel(
@@ -292,14 +298,11 @@ def count_skeleton_fragments(
     # 标记连通分量
     labeled_array, num_features = ndimage.label(skeleton)
     
-    # 统计每个分量的长度
-    fragment_lengths = []
-    for i in range(1, num_features + 1):
-        length = np.sum(labeled_array == i)
-        if length >= min_length:
-            fragment_lengths.append(length)
-    
-    return len(fragment_lengths)
+    if num_features == 0:
+        return 0
+
+    component_sizes = _component_sizes(labeled_array, num_features)
+    return int(np.count_nonzero(component_sizes >= min_length))
 
 
 def compute_topology_metrics(
